@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
   number: {
     type: Number,
     unique: true,
-    required : false,
+    required: false,
     min: [1000000000, "Number must be at least 10 digits"],
     max: [9999999999, "Number cannot exceed 10 digits"],
   },
@@ -31,14 +31,18 @@ const userSchema = new mongoose.Schema({
     default: 0,
     min: [0, "User type ID must be a positive number"],
   },
-  savedCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
-  boughtCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
-  completed: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Course.data.lessons" },
+  wishlist: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    }
   ],
-  noOfSavedCourses: { type: Number, default: 0 },
-  noOfBoughtCourses: { type: Number, default: 0 },
-
+  orders: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+    }
+  ],
   otp: {
     otp: {
       type: Number,
@@ -54,4 +58,4 @@ userSchema.pre("save", function (next) {
   next();
 });
 
-module.exports = mongoose.model("AuthUser", userSchema);
+module.exports = mongoose.model("User", userSchema);
