@@ -2,7 +2,8 @@ const router = require("express").Router();
 const authControll = require("../controller/authControl");
 const { verifyUserToken } = require("../middlewares/authUser");
 
-
+// To verify email
+router.post("/verify-email", authControll.verifyEmail);
 // To register a user
 router.post("/register", authControll.register);
 // To sign in with google

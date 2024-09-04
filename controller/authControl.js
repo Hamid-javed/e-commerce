@@ -7,6 +7,46 @@ const { SECRET_TOKEN } = require("../config/crypto");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.clientId);
 
+
+exports.verifyEmail = async (req, res) => {
+  const email = req.body.email;
+  const user = await User.findOne({ email: email });
+  if (user) return res.status(400).json({ message: "User already exists" });
+
+  const otp = utils.generateRandomFourDigitNumber();
+  const otpExpires = Date.now() + 180 * 1000;
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "otpsendericr@gmail.com",
+      pass: "opbz tfty xbrw cigw",
+    },
+  });
+  async function sendOtpEmail(email, otp) {
+    const mailOptions = {
+      from: process.env.email,
+      to: email,
+      subject: "Password Reset OTP",
+      text: `Your OTP for resetting the password is ${otp}`,
+      html: `<b>Your OTP for resetting the password is <strong>${otp}</strong></b>`,
+    };
+    try {
+      await transporter.sendMail(mailOptions);
+      res.status(200).json({ message: "Opt send Successfully!" })
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  user.otp.otp = otp;
+  user.otp.expireDate = otpExpires;
+  await user.save();
+  await sendOtpEmail(email, otp);
+};
+
+
 // Controller for user registeration
 exports.register = async (req, res) => {
   const { name, email, number, password } = req.body;
@@ -32,6 +72,7 @@ exports.register = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // Controller for user Login
 exports.login = async (req, res) => {
@@ -95,7 +136,7 @@ exports.changeDetails = async (req, res) => {
 exports.requestOtp = async (req, res) => {
   const email = req.body.email;
   const user = await User.findOne({ email: email });
-  if (!user) return res.status(400).json({ message: "User Not Found" });
+  if (!user) return res.status(400).json({ message: "User not Found!" });
 
   const otp = utils.generateRandomFourDigitNumber();
   const otpExpires = Date.now() + 180 * 1000;
@@ -128,7 +169,6 @@ exports.requestOtp = async (req, res) => {
   user.otp.expireDate = otpExpires;
   await user.save();
   await sendOtpEmail(email, otp);
-  // res.status(200).json({ message: "OTP sent to your email" });
 };
 
 // request change otp
