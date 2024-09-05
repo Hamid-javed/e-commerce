@@ -1,7 +1,7 @@
+require("dotenv").config()
 const express = require("express")
 const app = express()
 const mongoose = require("mongoose");
-require("dotenv").config()
 const userRouter = require("./routes/userRouter")
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
@@ -26,6 +26,8 @@ app.use(express.json())
 
 
 app.use("/auth", userRouter);
+app.use("/", review );
+
 app.get("/", (req, res) => res.send("hello"))
 
 
