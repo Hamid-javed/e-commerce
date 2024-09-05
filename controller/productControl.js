@@ -1,5 +1,6 @@
 const Category = require("../model/categorySchema")
 const Cart = require("../model/cartSchema")
+const Order = require("../model/orderSchema")
 const Product = require("../model/productSchema")
 const User = require("../model/userSchema")
 
@@ -173,19 +174,53 @@ exports.addToCart = async (req, res) => {
 }
 
 
-exports.buyProduct = async () => {
+exports.buyProduct = async (req, res) => {
   try {
-    // const userId = req.id;
-    const { cartId } = req.params;
-    console.log(cartId)
-    // const { street, city, state, zip, country } = req.body;
-    const userCart = await Cart.findById({ _id: cartId })
-    console.log(userCart)
-    if (!userCart) {
-      return res.status(404).json({ message: "No such cart found!" })
+    const userId = req.id;
+    const { cartId, productId } = req.params;
+    const { street, city, state, zip, country, paymentMethod } = req.body;
+    if (!street) {
+      return res.status(400).json({ message: "Street is required." });
     }
-    // const itemDetails = userCart.it
+    if (!city) {
+      return res.status(400).json({ message: "City is required." });
+    }
+    if (!state) {
+      return res.status(400).json({ message: "State is required." });
+    }
+    if (!zip) {
+      return res.status(400).json({ message: "Zip code is required." });
+    }
+    if (!country) {
+      return res.status(400).json({ message: "Country is required." });
+    }
+    if (!paymentMethod) {
+      return res.status(400).json({ message: "Payment method is required." });
+    }
+    const userCart = await Cart.findById({ _id: cartId })
+    if (!userCart) {
+      return res.status(404).json({ message: "No such cart found!" });
+    }
+    const productInCart = userCart.items.find((item) => item.product.toString() === productId);
+    if (!productInCart) {
+      return res.status(404).json({ message: "No such product found in the cart!" });
+    }
+    const shippingAddress = {
+      street,
+      city,
+      state,
+      zip,
+      country,
+    };
+    const userOrder = await Order.create({
+      user: userId,
+      items: [productInCart],
+      totalAmount: productInCart.price,
+      paymentMethod: paymentMethod,
+      shippingAddress
+    })
+    res.states(200).json({ message: "Order placed successfullu!" })
   } catch (error) {
-
+    res.status(500).json({ error: error.message })
   }
 }
