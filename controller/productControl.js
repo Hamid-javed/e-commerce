@@ -139,11 +139,28 @@ exports.addToCart = async (req, res) => {
       quantity: quantity,
       price: price
     }
-    const userCart = await Cart.findOne({ user: userId })
-    if (userCart.length === 0) {
-      return await Cart.create({ user: userId, items: [productDetails], total:  price * quantity})
+    let userCart = await Cart.findOne({ user: userId })
+    if (!userCart) {
+      userCart = await Cart.create({
+        user: userId,
+        items: [productDetails],
+        total: price * quantity
+      });
+    } else {
+      const existingProductIndex = userCart.items.findIndex(item =>
+        item.product.toString() === productId &&
+        item.color === color &&
+        item.size === size
+      );
+
+      if (existingProductIndex !== -1) {
+        userCart.items[existingProductIndex].quantity += quantity;
+        userCart.items[existingProductIndex].price = price;
+      } else {
+        userCart.items.push(productDetails);
+      }
     }
-    userCart.items.push(productDetails)
+    userCart.total = userCart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
     await userCart.save();
     res.status(200).json({
       message: "Product added to cart!",
@@ -152,5 +169,23 @@ exports.addToCart = async (req, res) => {
     res.status(501).json({
       error: error.message,
     });
+  }
+}
+
+
+exports.buyProduct = async () => {
+  try {
+    // const userId = req.id;
+    const { cartId } = req.params;
+    console.log(cartId)
+    // const { street, city, state, zip, country } = req.body;
+    const userCart = await Cart.findById({ _id: cartId })
+    console.log(userCart)
+    if (!userCart) {
+      return res.status(404).json({ message: "No such cart found!" })
+    }
+    // const itemDetails = userCart.it
+  } catch (error) {
+
   }
 }
