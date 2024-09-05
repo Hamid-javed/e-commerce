@@ -5,6 +5,9 @@ const variantSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  colorHex: {
+    type: String,
+  },
   size: {
     type: String,
     required: true,
@@ -23,6 +26,13 @@ const variantSchema = new mongoose.Schema({
   },
 });
 
+const reviewSchema = new mongoose.Schema({
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  review: { type: String, },
+  date: { type: Date, default: Date.now },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+});
+
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -31,21 +41,12 @@ const productSchema = new mongoose.Schema({
   description: {
     type: String,
   },
-  category: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Category",
-    required: true,
-  },
+  category: {type: String},
   reviewCount: {type: Number, default: 0, min: 0},
   rating: {type: Number, default: 0, min: 0, max: 5},
-  reviews: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Review",
-      required: true,
-    }
-  ],
   variants: [variantSchema],
+  reviews: [reviewSchema],
+  attributes: [],
   createdAt: {
     type: Date,
     default: Date.now,
@@ -55,10 +56,10 @@ const productSchema = new mongoose.Schema({
 productSchema.pre("save", function (next) {
   const reviewNum = this.reviews.length;
   let rating = 0;
-  for (let i = 0; i < this.data.reviews.length; i++) {
-    rating += this.data.reviews[i].rating;
+  for (let i = 0; i < this.reviews.length; i++) {
+    rating += this.reviews[i].rating;
   }
-  rating = rating / this.data.reviews.length;
+  rating = rating / this.reviews.length;
   rating = rating > 5 ? 5 : rating;
   rating = rating < 0 ? 0 : rating;
   rating = parseFloat(rating.toFixed(1));
