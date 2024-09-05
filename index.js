@@ -3,6 +3,7 @@ const express = require("express")
 const app = express()
 const mongoose = require("mongoose");
 const userRouter = require("./routes/userRouter")
+const productRouter = require("./routes/productRouter")
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
@@ -26,8 +27,7 @@ app.use(express.json())
 
 
 app.use("/auth", userRouter);
-app.use("/", review );
-
+app.use("/products", productRouter);
 app.get("/", (req, res) => res.send("hello"))
 
 
