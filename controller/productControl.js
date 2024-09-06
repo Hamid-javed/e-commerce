@@ -173,6 +173,31 @@ exports.addToCart = async (req, res) => {
   }
 }
 
+exports.removeFromCArt = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { productId } = req.params;
+    const userCart = await Cart.findOne({ user: userId })
+    if (!userCart) {
+      return res.status(404).json({ message: "Cart not found!" });
+    }
+    const productToRemove = userCart.items.find((items) => {
+      return items.product.toString() === productId
+    })
+    if (!productToRemove) {
+      return res.status(404).json({ message: "Product not found in cart!" });
+    }
+    userCart.items = userCart.items.filter(item => item.product.toString() === productId)
+    await userCart.save()
+    res.status(200).json({
+      message: "Product removed from cart!",
+    });
+  } catch (error) {
+    res.status(501).json({
+      error: error.message,
+    });
+  }
+}
 
 exports.buyProduct = async (req, res) => {
   try {
