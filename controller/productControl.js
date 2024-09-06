@@ -249,3 +249,19 @@ exports.buyProduct = async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }
+
+exports.getMyOrders = async (req, res) => {
+  try {
+    const userId = req.id;
+    const userOrders = await Order.find({user: userId})
+    res.status(200).json({
+      userOrders
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+

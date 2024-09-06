@@ -11,6 +11,7 @@ router.get("/search",verifyUserToken, productControl.search);
 router.post("/cart-product/:productId",verifyUserToken, productControl.addToCart);
 router.delete("/cart-product/:productId",verifyUserToken, productControl.removeFromCArt);
 router.post("/buy-product/:cartId/:productId",verifyUserToken, productControl.buyProduct);
+router.get("/get-orders",verifyUserToken, productControl.getMyOrders);
 
 
 
