@@ -13,7 +13,10 @@ router.post("/buy-product/:cartId/:productId",verifyUserToken, productControl.bu
 router.get("/get-orders",verifyUserToken, productControl.getMyOrders);
 router.post("/wishlist/:productId",verifyUserToken, productControl.addProductTWoishlist);
 router.delete("/wishlist/:productId",verifyUserToken, productControl.removeProductTWoishlist);
-
+router.get("/:productId/reviews", productControl.getAllReviews);
+router.post("/:productId/reviews", verifyUserToken, productControl.addReview);
+router.put("/reviews/:reviewId", verifyUserToken, productControl.updateReview);
+router.delete("/reviews/:reviewId",verifyUserToken, productControl.deleteReview);
 
 
 
