@@ -173,7 +173,7 @@ exports.addToCart = async (req, res) => {
   }
 }
 
-exports.removeFromCArt = async (req, res) => {
+exports.removeFromCart = async (req, res) => {
   try {
     const userId = req.id;
     const { productId } = req.params;
@@ -244,6 +244,9 @@ exports.buyProduct = async (req, res) => {
       paymentMethod: paymentMethod,
       shippingAddress
     })
+    const user = await User.findById(userId)
+    user.orders.push(userOrder)
+    user.save()
     res.status(200).json({ message: "Order placed successfullu!" })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -253,9 +256,52 @@ exports.buyProduct = async (req, res) => {
 exports.getMyOrders = async (req, res) => {
   try {
     const userId = req.id;
-    const userOrders = await Order.find({user: userId})
+    const userOrders = await Order.find({ user: userId })
     res.status(200).json({
       userOrders
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+
+exports.addProductTWoishlist = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { productId } = req.params;
+    if (!productId) {
+      res.status(404).json({ message: "Product not found!" })
+    }
+    const product = await Product.findById(productId)
+    const user = await User.findById(userId)
+    await user.wishlist.push(product)
+    user.save()
+    res.status(200).json({
+      message: "Product added to wishlist!"
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+
+exports.removeProductTWoishlist = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { productId } = req.params;
+    if (!productId) {
+      res.status(404).json({ message: "Product not found!" })
+    }
+    const user = await User.findById(userId)
+    user.wishlist = user.wishlist.filter(product => product.toString() !== productId)
+    await user.save()
+    res.status(200).json({
+      message: "Product removed from wishlist!"
     })
   } catch (error) {
     res.status(500).json({
