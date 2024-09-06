@@ -1,6 +1,8 @@
 const Category = require("../model/categorySchema")
+const Cart = require("../model/cartSchema")
+const Order = require("../model/orderSchema")
 const Product = require("../model/productSchema")
-
+const User = require("../model/userSchema")
 
 
 exports.getCategories = async (req, res) => {
@@ -112,96 +114,200 @@ exports.search = async (req, res) => {
   }
 };
 
-// Create a review - Only if the user has purchased the product
-exports.addReview = async (req, res) => {
-  const { rating, review, productId } = req.body;
-  const userId = req.user._id;
-
+exports.addToCart = async (req, res) => {
   try {
-    const hasPurchased = await Order.findOne({
-      user: userId,
-      "items.product": productId,
-      status: { $in: ['Shipped', 'Delivered'] },
-    });
-
-    if (!hasPurchased) {
-      return res.status(403).json({ message: "You can only review products you have purchased." });
+    const userId = req.id;
+    const { productId } = req.params;
+    const { color, size, quantity } = req.body;
+    const user = await User.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ message: "User not found!" });
     }
-
-    const newReview = new Review({
-      rating,
-      review,
-      user: userId,
+    const product = await Product.findById({ _id: productId })
+    if (!product) {
+      return res.status(404).json({ message: "Product not Found!" })
+    }
+    const index = await product.variants.findIndex((variant) => {
+      if (variant.color === color && variant.size === size) {
+        return true;
+      }
+    })
+    const price = product.variants[index].price
+    const productDetails = {
       product: productId,
+      color: color,
+      size: size,
+      quantity: quantity,
+      price: price
+    }
+    let userCart = await Cart.findOne({ user: userId })
+    if (!userCart) {
+      userCart = await Cart.create({
+        user: userId,
+        items: [productDetails],
+        total: price * quantity
+      });
+    } else {
+      const existingProductIndex = userCart.items.findIndex(item =>
+        item.product.toString() === productId &&
+        item.color === color &&
+        item.size === size
+      );
+
+      if (existingProductIndex !== -1) {
+        userCart.items[existingProductIndex].quantity += quantity;
+        userCart.items[existingProductIndex].price = price;
+      } else {
+        userCart.items.push(productDetails);
+      }
+    }
+    userCart.total = userCart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    await userCart.save();
+    res.status(200).json({
+      message: "Product added to cart!",
     });
-
-    await newReview.save();
-    res.status(201).json({ message: "Review added successfully", review: newReview });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+  } catch (error) {
+    res.status(501).json({
+      error: error.message,
+    });
   }
-};
+}
 
-// Update a review - Only if the review belongs to the user
-exports.updateReview = async (req, res) => {
-  const { reviewId } = req.params;
-  const { rating, review } = req.body;
-  const userId = req.user._id;
-
+exports.removeFromCart = async (req, res) => {
   try {
-    const existingReview = await Review.findById(reviewId);
-
-    if (!existingReview) {
-      return res.status(404).json({ message: "Review not found." });
+    const userId = req.id;
+    const { productId } = req.params;
+    const userCart = await Cart.findOne({ user: userId })
+    if (!userCart) {
+      return res.status(404).json({ message: "Cart not found!" });
     }
-
-    if (existingReview.user.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "You can only update your own review." });
+    const productToRemove = userCart.items.find((items) => {
+      return items.product.toString() === productId
+    })
+    if (!productToRemove) {
+      return res.status(404).json({ message: "Product not found in cart!" });
     }
-
-    existingReview.rating = rating;
-    existingReview.review = review;
-
-    await existingReview.save();
-    res.status(200).json({ message: "Review updated successfully", review: existingReview });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    userCart.items = userCart.items.filter(item => item.product.toString() === productId)
+    await userCart.save()
+    res.status(200).json({
+      message: "Product removed from cart!",
+    });
+  } catch (error) {
+    res.status(501).json({
+      error: error.message,
+    });
   }
-};
+}
 
-
-// Delete a review - Only if the review belongs to the user
-exports.deleteReview = async (req, res) => {
-  const { reviewId } = req.params;
-  const userId = req.user._id;
-
+exports.buyProduct = async (req, res) => {
   try {
-    const existingReview = await Review.findById(reviewId);
-
-    if (!existingReview) {
-      return res.status(404).json({ message: "Review not found." });
+    const userId = req.id;
+    const { cartId, productId } = req.params;
+    const { street, city, state, zip, country, paymentMethod } = req.body;
+    if (!street) {
+      return res.status(400).json({ message: "Street is required." });
     }
-
-    if (existingReview.user.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "You can only delete your own review." });
+    if (!city) {
+      return res.status(400).json({ message: "City is required." });
     }
-
-    await existingReview.remove();
-    res.status(200).json({ message: "Review deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    if (!state) {
+      return res.status(400).json({ message: "State is required." });
+    }
+    if (!zip) {
+      return res.status(400).json({ message: "Zip code is required." });
+    }
+    if (!country) {
+      return res.status(400).json({ message: "Country is required." });
+    }
+    if (!paymentMethod) {
+      return res.status(400).json({ message: "Payment method is required." });
+    }
+    const userCart = await Cart.findById({ _id: cartId })
+    if (!userCart) {
+      return res.status(404).json({ message: "No such cart found!" });
+    }
+    const productInCart = userCart.items.find((item) => item.product.toString() === productId);
+    if (!productInCart) {
+      return res.status(404).json({ message: "No such product found in the cart!" });
+    }
+    const shippingAddress = {
+      street,
+      city,
+      state,
+      zip,
+      country,
+    };
+    const userOrder = await Order.create({
+      user: userId,
+      items: [productInCart],
+      totalAmount: productInCart.price * productInCart.quantity,
+      paymentMethod: paymentMethod,
+      shippingAddress
+    })
+    const user = await User.findById(userId)
+    user.orders.push(userOrder)
+    user.save()
+    res.status(200).json({ message: "Order placed successfullu!" })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
-};
+}
 
-
-// Get all reviews for a product
-exports.getReviews = async (req, res) => {
-  const { productId } = req.params;
-
+exports.getMyOrders = async (req, res) => {
   try {
-    const reviews = await Review.find({ product: productId }).populate("user", "name");
-    res.status(200).json(reviews);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    const userId = req.id;
+    const userOrders = await Order.find({ user: userId })
+    res.status(200).json({
+      userOrders
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
-};
+}
+
+exports.addProductTWoishlist = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { productId } = req.params;
+    if (!productId) {
+      res.status(404).json({ message: "Product not found!" })
+    }
+    const product = await Product.findById(productId)
+    const user = await User.findById(userId)
+    await user.wishlist.push(product)
+    user.save()
+    res.status(200).json({
+      message: "Product added to wishlist!"
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+
+exports.removeProductTWoishlist = async (req, res) => {
+  try {
+    const userId = req.id;
+    const { productId } = req.params;
+    if (!productId) {
+      res.status(404).json({ message: "Product not found!" })
+    }
+    const user = await User.findById(userId)
+    user.wishlist = user.wishlist.filter(product => product.toString() !== productId)
+    await user.save()
+    res.status(200).json({
+      message: "Product removed from wishlist!"
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+
