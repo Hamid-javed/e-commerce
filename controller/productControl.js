@@ -215,11 +215,11 @@ exports.buyProduct = async (req, res) => {
     const userOrder = await Order.create({
       user: userId,
       items: [productInCart],
-      totalAmount: productInCart.price,
+      totalAmount: productInCart.price * productInCart.quantity,
       paymentMethod: paymentMethod,
       shippingAddress
     })
-    res.states(200).json({ message: "Order placed successfullu!" })
+    res.status(200).json({ message: "Order placed successfullu!" })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
