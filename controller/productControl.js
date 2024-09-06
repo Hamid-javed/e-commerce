@@ -1,6 +1,8 @@
 const Category = require("../model/categorySchema")
 const Product = require("../model/productSchema")
 
+
+
 exports.getCategories = async (req, res) => {
   const categories = await Category.find()
   const categoryData = categories.map((category) => {
