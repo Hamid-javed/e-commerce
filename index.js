@@ -4,8 +4,10 @@ const app = express()
 const mongoose = require("mongoose");
 const userRouter = require("./routes/userRouter")
 const productRouter = require("./routes/productRouter")
+const adminRouter = require("./routes/adminRouter")
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+
 
 const port = process.env.PORT
 
@@ -28,6 +30,7 @@ app.use(express.json())
 
 app.use("/auth", userRouter);
 app.use("/products", productRouter);
+app.use("/admin", adminRouter)
 app.get("/", (req, res) => res.send("hello"))
 
 
